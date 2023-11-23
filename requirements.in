@@ -1,0 +1,15 @@
+bs4
+chromadb
+langchain
+lxml
+metaflow
+openai
+pandas
+pydantic
+python-dotenv
+pyyaml
+scikit-learn
+seaborn
+sentence-transformers
+streamlit
+tiktoken

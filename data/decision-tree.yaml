@@ -1,0 +1,143 @@
+---
+chat_initialization:
+    - role: "system"
+      content: >-
+          You are an autoregressive language model that accurately answers multiple-choice questions about scientific papers.
+
+          You ALWAYS output your response as valid JSON, that adheres strictly following schema, with the keys in the order given:
+
+          type Output = {
+              research: string; // To help you THINK carefully about your response, summarize the question and the relevant available evidence in your own
+          words, in one hundred words or fewer
+              assessment: string; // Provide specific evidence for the choice of one option over the other, in forty words or fewer
+              response: string; // Your answer: "A" or "B"
+              confidence: number; // Scale: 1 (uncertain) to 5 (certain)
+          }
+excerpt_configuration:
+    literal_queries:
+        - experiment
+        - manipulat
+        - randomiz
+        - measur
+    semantic_queries:
+        - >-
+          Does the article discuss an original structured investigation in the
+          form of experiments, trials, or treatments?
+        - >-
+          Does this paper discuss plant functional traits, which can also be
+          referred to as "functional traits" or just "traits"?  Specific examples
+          of common plant functional traits include, but are not limited to:
+          - height
+          - leaf dry matter content
+          - leaf mass area
+          - leaf nitrogen
+          - root mass ratio
+          - seed mass
+          - seedling mass
+          - specific leaf area
+          - water use efficiency
+initial_node_id: 0
+error_node_id: -99
+nodes:
+    - id: 0
+      name: is-empirical-paper
+      prompt: >-
+          Here is some content excerpted from an article from the scientific
+          literature:
+
+          Journal: {journal}
+
+          Title: {title}
+
+          Sentences from article most semantically related to our questions,
+          annotated with section heading where they occur:
+
+          {selected_md}
+
+          Question: Based on the above, which of these two possibilities is the correct one?
+      choices:
+          - prompt: The article reports original empirical research.
+            next_node_id: 1
+          - prompt: The article does not report original empirical research, e.g. is a review or commentary.
+            next_node_id: 100
+    - id: 1
+      name: is-real-world-experimental-manipulation
+      prompt: >-
+          We are still referring the article excerpted previously.
+
+          Question: Based on the above, which of these two possibilities is the correct one?
+      choices:
+          - prompt: The article reports on a novel real-world experimental manipulation.
+            next_node_id: 2
+          - prompt: The article reports on something other than an experiment, like an observational study or analysis of preexisting results.
+            next_node_id: 101
+    - id: 2
+      name: are-traits-measured-in-experiment
+      prompt: >-
+          Here is additional general background relevant to the next question:
+
+          - Assume that the excerpts included above from the article contain any
+            references to traits, so that if they are not in the excerpts, they
+            are not in the article.
+          - The term "plant functional traits" refers to the measurable features
+            of plants that have functional significance.
+          - Plant functional traits are not universally described in those exact
+            terms; they're e.g. sometimes referred to as "functional
+            traits" or just "traits".
+          - To help you understand if plant functional traits might be
+            discussed, but in alternative terms, common examples of plant
+            functional traits include, but are not limited to:
+              - height
+              - leaf dry matter content
+              - leaf mass area
+              - leaf nitrogen
+              - root mass ratio
+              - seed mass
+              - seedling mass
+              - specific leaf area
+              - water use efficiency
+
+          Question: Based on the above, which of these two possibilities is the correct one?
+      choices:
+          - prompt: The article substantively involves plant functional traits.
+            next_node_id: 3
+          - prompt: The article does not involve plant functional traits, or mentions them only superficially.
+            next_node_id: 102
+    - id: 3
+      name: are-traits-integral-to-design
+      prompt: >-
+          This question builds on the previous answers, so consider the entire
+          chat history carefully.
+
+          Additional background:
+
+          - We are interested in whether plant functional traits are integral,
+            or incidental, to the design of the experiment in this article.
+          - "Integral" means that functional traits were part of the
+            experimental hypothesis, i.e. that one or both of these are true:
+              - Plant functional traits were used to SELECT the species for the
+                experimental manipulation.
+              - Plant functional traits wered used to IDENTIFY the experimental
+                treatments (e.g., grazing, burning, carbon addition).
+          - "Incidental" means that while functional traits may have been
+            mentioned or even measured after the fact, they were not used to
+            design the experiment.
+
+          Question: Based on the above, which of these two possibilities is the correct one?
+      choices:
+          - prompt: Plant functional traits are integral to the design of the experiment.
+            next_node_id: 103
+          - prompt: Plant functional traits are incidental to the design of the experiment.
+            next_node_id: 104
+    - id: 100
+      name: not-an-empirical-paper
+    - id: 101
+      name: not-an-experiment
+    - id: 102
+      name: traits-not-measured
+    - id: 103
+      name: traits-integral-to-experimental-design
+    - id: 104
+      name: traits-NOT-integral-to-experimental-design
+    - id: -99
+      name: error
